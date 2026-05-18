@@ -20,9 +20,25 @@ export default function ContestControlPage() {
   const [loading, setLoading] = useState(true);
   const [contestTitle, setContestTitle] = useState("Coding Championship 2025");
   const [duration, setDuration] = useState(120);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [allQuestions, setAllQuestions] = useState([]);
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { fetchContest(); }, []);
+  useEffect(() => { 
+    fetchContest(); 
+    fetchQuestions();
+  }, []);
+
+  const fetchQuestions = async () => {
+    try {
+      const res = await questionService.getAll();
+      setAllQuestions(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch questions:", err);
+    }
+  };
 
   const fetchContest = async () => {
     try {
@@ -33,6 +49,9 @@ export default function ContestControlPage() {
         setContestStatus(c.status);
         setContestTitle(c.title);
         setDuration(c.duration || 120);
+        setStartTime(c.startTime ? new Date(c.startTime).toISOString().slice(0, 16) : "");
+        setEndTime(c.endTime ? new Date(c.endTime).toISOString().slice(0, 16) : "");
+        setSelectedQuestions(c.questions?.map(q => typeof q === 'object' ? (q._id || q.id) : q) || []);
       }
     } catch { /* no contest yet */ }
     finally { setLoading(false); }
@@ -72,16 +91,22 @@ export default function ContestControlPage() {
     setSaving(true);
     try {
       if (contest) {
-        await contestService.update(contest._id, { title: contestTitle, duration });
+        await contestService.update(contest._id, { 
+          title: contestTitle, 
+          duration,
+          startTime,
+          endTime,
+          questions: selectedQuestions
+        });
         toast.success("Configuration saved");
       } else {
-        // Create new contest with all questions
-        const qRes = await questionService.getAll();
-        const questionIds = qRes.data.map(q => q._id);
+        // Create new contest
         const res = await contestService.create({
           title: contestTitle,
           duration,
-          questions: questionIds,
+          startTime,
+          endTime,
+          questions: selectedQuestions,
           status: "upcoming",
         });
         setContest(res.data);
@@ -136,22 +161,63 @@ export default function ContestControlPage() {
       <Card className="border-border/50 bg-card">
         <CardHeader><CardTitle className="text-base font-semibold">Contest Configuration</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2"><Label>Contest Name</Label><Input value={contestTitle} onChange={(e) => setContestTitle(e.target.value)} className="bg-muted/50" /></div>
-            <div className="space-y-2"><Label>Duration (minutes)</Label><Input type="number" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="bg-muted/50" /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-2"><Label className="text-muted-foreground font-semibold tracking-wider text-[10px] uppercase">Contest Name</Label><Input value={contestTitle} onChange={(e) => setContestTitle(e.target.value)} className="bg-background border-border/50 h-10 font-medium" /></div>
+            <div className="space-y-2"><Label className="text-muted-foreground font-semibold tracking-wider text-[10px] uppercase">Duration (minutes)</Label><Input type="number" value={duration} onChange={(e) => setDuration(parseInt(e.target.value))} className="bg-background border-border/50 h-10 font-medium" /></div>
+            <div className="space-y-2"><Label className="text-muted-foreground font-semibold tracking-wider text-[10px] uppercase">Start Time</Label><Input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="bg-background border-border/50 h-10 font-medium" /></div>
+            <div className="space-y-2"><Label className="text-muted-foreground font-semibold tracking-wider text-[10px] uppercase">End Time</Label><Input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="bg-background border-border/50 h-10 font-medium" /></div>
           </div>
-          <Button onClick={handleSaveConfig} disabled={saving} className="bg-gradient-to-r from-cyan-600 to-cyan-500 text-white border-0">
-            {saving ? <><Loader2 className="size-3.5 mr-1.5 animate-spin" /> Saving...</> : contest ? "Save Configuration" : "Create Contest"}
-          </Button>
+          
+          <div className="space-y-2 pt-4">
+            <Label className="text-muted-foreground font-semibold tracking-wider text-[10px] uppercase">Select Questions</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[300px] overflow-y-auto p-3 border border-border/50 rounded-xl bg-background/50 backdrop-blur-sm shadow-inner">
+              {allQuestions.map(q => (
+                <div key={q._id} className="flex items-start space-x-3 bg-card p-3 rounded-lg border border-border/60 hover:border-cyan-500/30 transition-colors shadow-sm group">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      id={`q-${q._id}`}
+                      className="rounded border-gray-600 text-cyan-500 focus:ring-cyan-500/50 bg-background size-4.5 cursor-pointer accent-cyan-500"
+                      checked={selectedQuestions.includes(q._id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedQuestions([...selectedQuestions, q._id]);
+                        } else {
+                          setSelectedQuestions(selectedQuestions.filter(id => id !== q._id));
+                        }
+                      }}
+                    />
+                  </div>
+                  <Label htmlFor={`q-${q._id}`} className="text-sm font-semibold leading-tight cursor-pointer flex-1 group-hover:text-cyan-400 transition-colors">
+                    {q.title} 
+                    <span className={`block mt-1 text-[10px] font-bold tracking-wider uppercase ${q.difficulty === 'Easy' ? 'text-emerald-400' : q.difficulty === 'Medium' ? 'text-amber-400' : 'text-red-400'}`}>
+                      {q.difficulty} • {q.points || 10} pts
+                    </span>
+                  </Label>
+                </div>
+              ))}
+              {allQuestions.length === 0 && <p className="text-sm text-muted-foreground col-span-full text-center py-8 bg-card rounded-lg border border-dashed border-border/50">No questions available in the database.</p>}
+            </div>
+          </div>
+
+          <div className="pt-4 flex justify-end">
+            <Button onClick={handleSaveConfig} disabled={saving} className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white border-0 shadow-[0_0_15px_rgba(6,182,212,0.3)] font-semibold tracking-wide px-8 h-11 transition-all hover:scale-[1.02]">
+              {saving ? <><Loader2 className="size-4 mr-2 animate-spin" /> Saving Changes...</> : contest ? "Update Configuration" : "Initialize Contest"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="border-red-500/30 bg-red-500/5">
-        <CardHeader><CardTitle className="text-base font-semibold flex items-center gap-2 text-red-400"><AlertTriangle className="size-4" /> Danger Zone</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-lg border border-red-500/20">
-            <div><p className="text-sm font-medium">Force End Contest</p><p className="text-xs text-muted-foreground">Immediately end the contest for all participants</p></div>
-            <Button variant="outline" size="sm" className="border-red-500/50 text-red-400 hover:bg-red-500/10" onClick={() => setConfirmAction("end")}>Force End</Button>
+      <Card className="border-red-500/50 bg-red-500/10 shadow-[0_0_15px_rgba(239,68,68,0.1)] relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/20 blur-3xl -mr-10 -mt-10 rounded-full" />
+        <CardHeader><CardTitle className="text-lg font-bold flex items-center gap-2 text-red-400 relative z-10"><AlertTriangle className="size-5" /> Danger Zone</CardTitle></CardHeader>
+        <CardContent className="space-y-4 relative z-10">
+          <div className="flex items-center justify-between p-4 rounded-xl border border-red-500/30 bg-red-950/40 backdrop-blur-sm">
+            <div>
+              <p className="text-sm font-bold text-red-200">Force End Contest</p>
+              <p className="text-xs text-red-300/70 mt-1">Immediately end the live contest and close all submissions. This action cannot be undone.</p>
+            </div>
+            <Button variant="destructive" size="sm" className="bg-red-600 hover:bg-red-700 text-white font-semibold tracking-wide shadow-[0_0_10px_rgba(239,68,68,0.4)]" onClick={() => setConfirmAction("end")}>Force End</Button>
           </div>
         </CardContent>
       </Card>

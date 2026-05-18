@@ -16,12 +16,12 @@ export default function Login() {
     setLoading(true);
     try {
       const user = await login(email, password);
-      toast.success(`Welcome back, ${user.name}!`);
-      if (user.role === "admin") {
-        window.location.href = "http://localhost:5174/";
-      } else {
-        navigate("/contest");
+      if (user.role !== "admin") {
+        toast.error("You are not an admin!");
+        return;
       }
+      toast.success(`Welcome back, ${user.name}!`);
+      navigate("/");
     } catch (err) {
       toast.error(err.response?.data?.message || "Login failed");
     } finally {
@@ -43,11 +43,8 @@ export default function Login() {
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded px-4 py-2 text-white focus:border-indigo-500 outline-none" placeholder="••••••••" />
           </div>
           <button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium py-2 rounded transition-colors">
-            {loading ? "Logging in..." : "Login"}
+            {loading ? "Logging in..." : "Login to Admin Panel"}
           </button>
-          <p className="text-center text-sm text-zinc-400">
-            Don't have an account? <Link to="/register" className="text-indigo-400 hover:text-indigo-300">Register</Link>
-          </p>
         </div>
       </form>
     </div>

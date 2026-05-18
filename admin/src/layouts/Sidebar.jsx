@@ -18,14 +18,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 const menuItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/admin" },
-  { label: "Users", icon: Users, path: "/admin/users" },
-  { label: "Questions", icon: FileCode2, path: "/admin/questions" },
-  { label: "Submissions", icon: Send, path: "/admin/submissions" },
-  { label: "Leaderboard", icon: Trophy, path: "/admin/leaderboard" },
-  { label: "Announcements", icon: Megaphone, path: "/admin/announcements" },
-  { label: "Contest Control", icon: Gamepad2, path: "/admin/contest-control" },
-  { label: "Settings", icon: Settings, path: "/admin/settings" },
+  { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+  { label: "Users", icon: Users, path: "/users" },
+  { label: "Questions", icon: FileCode2, path: "/questions" },
+  { label: "Submissions", icon: Send, path: "/submissions" },
+  { label: "Leaderboard", icon: Trophy, path: "/leaderboard" },
+  { label: "Announcements", icon: Megaphone, path: "/announcements" },
+  { label: "Contest Control", icon: Gamepad2, path: "/contest-control" },
+  { label: "Settings", icon: Settings, path: "/settings" },
 ];
 
 function SidebarContent({ onClose }) {

@@ -4,14 +4,20 @@ import { useAuth } from "@/context/AuthContext";
 export function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
   return children;
 }
 
 export function AdminRoute({ children }) {
   const { user, isAdmin, loading } = useAuth();
   if (loading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-white">Loading...</div>;
-  if (!user) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  if (!isAdmin) {
+    return <Navigate to="/login" replace />;
+  }
   return children;
 }
